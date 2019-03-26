@@ -91,29 +91,29 @@ function get_ssh_hostname() {
     sudo -u ubuntu ssh -G $1 | awk '/^hostname / { print $2 }'
 }
 
-apt-get -y update
-apt-get -y install git
-apt-get install -y mysql-client
+# apt-get -y update
+# apt-get -y install git
+# apt-get install -y mysql-client
 
-echo ""
-echo "Installing maven 3.5"
-echo "============================================"
-wget http://www-us.apache.org/dist/maven/maven-3/3.5.4/binaries/apache-maven-3.5.4-bin.tar.gz
-tar -C /opt/ -xzf apache-maven-3.5.4-bin.tar.gz
-export M2_HOME="/opt/apache-maven-3.5.4"
-export PATH=$PATH:"/opt/apache-maven-3.5.4"
-update-alternatives --install "/usr/bin/mvn" "mvn" "/opt/apache-maven-3.5.4/bin/mvn" 0
-update-alternatives --set mvn /opt/apache-maven-3.5.4/bin/mvn
-rm apache-maven-3.5.4-bin.tar.gz
+# echo ""
+# echo "Installing maven 3.5"
+# echo "============================================"
+# wget http://www-us.apache.org/dist/maven/maven-3/3.5.4/binaries/apache-maven-3.5.4-bin.tar.gz
+# tar -C /opt/ -xzf apache-maven-3.5.4-bin.tar.gz
+# export M2_HOME="/opt/apache-maven-3.5.4"
+# export PATH=$PATH:"/opt/apache-maven-3.5.4"
+# update-alternatives --install "/usr/bin/mvn" "mvn" "/opt/apache-maven-3.5.4/bin/mvn" 0
+# update-alternatives --set mvn /opt/apache-maven-3.5.4/bin/mvn
+# rm apache-maven-3.5.4-bin.tar.gz
 
-echo ""
-echo "Installing Java..."
-echo "============================================"
-echo debconf shared/accepted-oracle-license-v1-1 select true | debconf-set-selections
-echo debconf shared/accepted-oracle-license-v1-1 seen true | debconf-set-selections
-add-apt-repository -y ppa:webupd8team/java
-apt-get update
-apt-get install -y oracle-java8-installer
+# echo ""
+# echo "Installing Java..."
+# echo "============================================"
+# echo debconf shared/accepted-oracle-license-v1-1 select true | debconf-set-selections
+# echo debconf shared/accepted-oracle-license-v1-1 seen true | debconf-set-selections
+# add-apt-repository -y ppa:webupd8team/java
+# apt-get update
+# apt-get install -y oracle-java8-installer
 
 echo ""
 echo "Setting up required files..."
@@ -122,23 +122,24 @@ cd /home/ubuntu
 mkdir workspace
 cd workspace
 
-# todo remove after a proper release
-git clone https://github.com/chrishantha/performance-common
-cd performance-common
-mvn clean install
-cd ../
+# # todo remove after a proper release
+# git clone https://github.com/chrishantha/performance-common
+# cd performance-common
+# mvn clean install
+# cd ../
 
-# todo change repo url
-git clone https://github.com/vihanga-liyanage/performance-is
-cd performance-is
-# todo remove checkout command.
-git checkout is-5.7.0
-mvn clean install
+# # todo change repo url
+# git clone https://github.com/vihanga-liyanage/performance-is
+# cd performance-is
+# # todo remove checkout command.
+# git checkout is-5.7.0
+# mvn clean install
 
 echo ""
 echo "Extracting is performance distribution..."
 echo "============================================"
 tar -C ../ -xzf distribution/target/is-performance-distribution-*.tar.gz
+# tar -C /home/ubuntu/workspace -xzf /home/ubuntu/is-performance-distribution-*.tar.gz
 
 echo ""
 echo "Running JMeter setup script..."

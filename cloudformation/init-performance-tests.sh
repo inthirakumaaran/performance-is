@@ -289,6 +289,7 @@ echo "Creating stack..."
 echo "$create_stack_command"
 stack_id="$($create_stack_command)"
 stack_id=$(echo $stack_id|jq -r .StackId)
+# stack_id="arn:aws:cloudformation:us-east-1:610968236798:stack/is-performance-test-stack/e03ae0e0-418d-11e9-89bc-0a522351f81e"
 
 function exit_handler() {
     # Get stack events
@@ -320,7 +321,7 @@ function get_is_instance_ip() {
 }
 
 # Delete the stack in case of an error.
-trap exit_handler EXIT
+# trap exit_handler EXIT
 
 echo ""
 echo "Created stack: $stack_id"
@@ -388,6 +389,8 @@ echo "RDS Hostname: $rds_host"
 copy_bastion_setup_command="scp -i $key_file -o StrictHostKeyChecking=no $results_dir/setup/setup-bastion.sh ubuntu@$bastion_node_ip:/home/ubuntu/"
 copy_key_file_command="scp -i $key_file -o StrictHostKeyChecking=no $key_file ubuntu@$bastion_node_ip:/home/ubuntu/private_key.pem"
 copy_jmeter_setup_command="scp -i $key_file -o StrictHostKeyChecking=no $jmeter_setup ubuntu@$bastion_node_ip:/home/ubuntu/"
+copy_performance_tar_command="scp -i $key_file -o "StrictHostKeyChecking=no" ../distribution/target/is-performance-distribution-*.tar.gz ubuntu@$bastion_node_ip:/home/ubuntu"
+
 echo ""
 echo "Copying files to Bastion node..."
 echo $copy_bastion_setup_command
@@ -396,6 +399,8 @@ echo $copy_key_file_command
 $copy_key_file_command
 echo $copy_jmeter_setup_command
 $copy_jmeter_setup_command
+echo $copy_performance_tar_command
+$copy_performance_tar_command
 
 setup_bastion_node_command="ssh -i $key_file -o "StrictHostKeyChecking=no" -t ubuntu@$bastion_node_ip sudo ./setup-bastion.sh -w $wso2_is_1_ip -i $wso2_is_2_ip -l $lb_host -r $rds_host -p $puppet_master_ip"
 echo ""
