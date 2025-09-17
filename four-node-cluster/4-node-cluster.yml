@@ -641,6 +641,7 @@ Parameters:
       - c5.large
       - c5.xlarge
       - c5.2xlarge
+      - c6i.xlarge
     ConstraintDescription: Must be a valid EC2 instance type
   DBUsername:
     Type: String
