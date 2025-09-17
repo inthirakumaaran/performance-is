@@ -259,7 +259,7 @@ Resources:
       DBName: WSO2_IS_DB_2
       #EngineVersion: !Select [1, !Split ["_", !ImportValue DBEngine]]
       #Engine:  !Select [0, !Split ["_", !ImportValue DBEngine]]
-      EngineVersion: 8.0.36
+      EngineVersion: 8.0.43
       Engine: MySQL
       EnablePerformanceInsights : 'true'
       MasterUsername: !Ref DBUsername
@@ -724,3 +724,36 @@ Mappings:
       AMI: ami-0e81aa4c57820bb57
     us-west-2:
       AMI: ami-03fa1f014b48fa6bd
+  DBTypeMap:
+    mysql:
+      Version: '8.0.43'
+      License: 'general-public-license'
+      ParameterGroup: 'perf-test-param-group'
+      FromPort: '3306'
+      ToPort: '3306'
+      DBType: 'mysql'
+    mssql:
+      Version: '14.00.3480.1.v1'
+      License: 'license-included'
+      ParameterGroup: 'perf-test-param-group-sqlserver'
+      FromPort: '1433'
+      ToPort: '1433'
+      DBType: 'sqlserver-se'
+    postgres:
+      Version: '14.14'
+      License: 'postgresql-license'
+      ParameterGroup: 'perf-test-param-group-postgres'
+      FromPort: '5432'
+      ToPort: '5432'
+      DBType: 'postgres'
+  HighConcurrencyModeMap:
+    "true":
+      DBIops: 5000
+      SessionDBIops: 5000
+      DBAllocationStorage: 100
+      SessionDBAllocationStorage: 100
+    "false":
+      DBIops: 1000
+      SessionDBIops: 1000
+      DBAllocationStorage: 100
+      SessionDBAllocationStorage: 100
