@@ -100,8 +100,8 @@ validationQueryTimeout="1"
 commitOnReturn=false
 
 [transport.https.properties]
-maxThreads = "250"
-acceptCount = "250"
+maxThreads = "500"
+acceptCount = "500"
 
 [authentication.consent]
 prompt = true
