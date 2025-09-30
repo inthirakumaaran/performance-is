@@ -104,7 +104,7 @@ maxThreads = "500"
 acceptCount = "500"
 
 [http_client.pool]
-enabled = true
+enabled = false
 
 [authentication.consent]
 prompt = true
