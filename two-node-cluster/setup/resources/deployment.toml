@@ -101,6 +101,9 @@ commitOnReturn=false
 maxThreads = "750"
 acceptCount = "750"
 
+[http_client.pool]
+enabled = true
+
 [authentication.consent]
 prompt = true
 
