@@ -267,7 +267,7 @@ elif [ "$concurrency" == "50-50" ]; then
     default_concurrent_users="50"
 elif [ "$concurrency" == "50-1000" ]; then
     echo "Running tests for concurrency level 50-1000"
-    default_concurrent_users="50 100 500 1000 1500"
+    default_concurrent_users="50 100 500 1000"
 else
     echo "Running tests for concurrency level 50-3000"
     default_concurrent_users="50 100 150 300 500 750 1000 1500 2000 2500 3000"
