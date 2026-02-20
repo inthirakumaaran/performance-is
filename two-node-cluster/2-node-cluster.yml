@@ -27,6 +27,7 @@ Metadata:
           - WSO2InstanceType
           - BastionInstanceType
           - EnableHighConcurrencyMode
+          - JavaVersion
       - Label:
           default: Network Configuration
         Parameters:
@@ -82,6 +83,8 @@ Metadata:
         default: Session DB Instance Type
       BastionInstanceType:
         default: Bastion Instance Type
+      JavaVersion:
+        default: Java Version
 Resources:
   # networking configurations
   WSO2ISVPCsuffix:
@@ -392,7 +395,8 @@ Resources:
             DEBIAN_FRONTEND=noninteractive env ACCEPT_EULA=Y apt-get install -y mssql-tools unixodbc-dev
             export PATH=/opt/mssql-tools/bin:$PATH
             echo "export PATH=$PATH" >>/etc/environment
-            curl -o jdk-setup.tar.gz https://performance-is-packs.s3.amazonaws.com/resources/jdk-21.0.5.11_linux-x64_bin.tar.gz
+            # Install Java - dynamically selected version
+            curl -o /tmp/jdk-setup.tar.gz ${JavaDownloadURL}
             sudo mkdir /usr/lib/jvm
             sudo tar -xvf jdk-setup.tar.gz -C /usr/lib/jvm
             sudo mv /usr/lib/jvm/jdk* /usr/lib/jvm/jdk
@@ -479,7 +483,8 @@ Resources:
             DEBIAN_FRONTEND=noninteractive env ACCEPT_EULA=Y apt-get install -y mssql-tools unixodbc-dev
             export PATH=/opt/mssql-tools/bin:$PATH
             echo "export PATH=$PATH" >>/etc/environment
-            curl -o jdk-setup.tar.gz https://performance-is-packs.s3.amazonaws.com/resources/jdk-21.0.5.11_linux-x64_bin.tar.gz
+            # Install Java - dynamically selected version
+            curl -o /tmp/jdk-setup.tar.gz ${JavaDownloadURL}
             sudo mkdir /usr/lib/jvm
             sudo tar -xvf jdk-setup.tar.gz -C /usr/lib/jvm
             sudo mv /usr/lib/jvm/jdk* /usr/lib/jvm/jdk
@@ -676,6 +681,14 @@ Parameters:
       - c6i.xlarge
       - c6i.2xlarge
     ConstraintDescription: Must be a valid EC2 instance type
+  JavaVersion:
+    Description: Java version to install on IS nodes
+    Type: String
+    Default: "21"
+    AllowedValues:
+      - "11"
+      - "21"
+    ConstraintDescription: Must be either 11 or 21
 Mappings:
   WSO2ISAMIRegionMapsuffix:
     us-east-1:
@@ -719,3 +732,8 @@ Mappings:
       SessionDBIops: 1000
       DBAllocationStorage: 100
       SessionDBAllocationStorage: 100
+  JavaVersionMap:
+    "11":
+      DownloadURL: "https://performance-is-packs.s3.amazonaws.com/resources/jdk-11.0.15.1_linux-x64_bin.tar.gz"
+    "21":
+      DownloadURL: "https://performance-is-packs.s3.amazonaws.com/resources/jdk-21.0.5.11_linux-x64_bin.tar.gz"

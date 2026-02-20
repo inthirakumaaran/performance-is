@@ -43,6 +43,8 @@ is_case_insensitive_username_and_attributes="false"
 enable_high_concurrency=false
 use_db_snapshot=false
 db_snapshot_id=""
+default_java_version="21"
+java_version="$default_java_version"
 
 results_dir="$PWD/results-$timestamp"
 default_minimum_stack_creation_wait_time=10
@@ -54,7 +56,7 @@ function usage() {
     echo "$0 -k <key_file> -c <certificate_name> -j <jmeter_setup_path> -n <IS_zip_file_path>"
     echo "   [-u <db_username>] [-p <db_password>] [-e <db_instance_type>] [-s <db_snapshot_id>] [-r <concurrency>]"
     echo "   [-i <wso2_is_instance_type>] [-b <bastion_instance_type>] [-t <keystore_type>] [-m <db_type>]"
-    echo "   [-l <is_case_insensitive_username_and_attributes>] [-q <user_tag>]"
+    echo "   [-l <is_case_insensitive_username_and_attributes>] [-q <user_tag>] [-J <java_version>]"
     echo "   [-w <minimum_stack_creation_wait_time>] [-g <number_of_nodes>] [-v <testing_mode>] [-h]"
     echo ""
     echo "-k: The Amazon EC2 key file to be used to access the instances."
@@ -78,6 +80,7 @@ function usage() {
     echo "-g: Number of IS nodes."
     echo "-m: Database type. Default: $db_type."
     echo "-l: Case insensitivity of the username and attributes. Default: $is_case_insensitive_username_and_attributes."
+    echo "-J: Java version to install on IS nodes (11 or 21). Default: $default_java_version."
     echo "-h: Display this help and exit."
     echo ""
 }
@@ -101,7 +104,7 @@ function execute_db_command() {
     ssh_bastion_cmd "$db_command"
 }
 
-while getopts "q:k:c:j:n:u:p:s:e:i:b:w:t:g:m:l:r:h" opts; do
+while getopts "q:k:c:j:n:u:p:s:e:i:b:w:t:g:m:l:r:J:h" opts; do
     case $opts in
     q)
         user_tag=${OPTARG}
@@ -153,6 +156,9 @@ while getopts "q:k:c:j:n:u:p:s:e:i:b:w:t:g:m:l:r:h" opts; do
         ;;
     l)
         is_case_insensitive_username_and_attributes=${OPTARG}
+        ;;
+    J)
+        java_version=${OPTARG}
         ;;
     h)
         usage
@@ -231,6 +237,12 @@ if ! [[ $minimum_stack_creation_wait_time =~ ^[0-9]+$ ]]; then
     exit 1
 fi
 
+# Validate Java version
+if [[ "$java_version" != "11" && "$java_version" != "21" ]]; then
+    echo "Invalid Java version: $java_version. Must be either 11 or 21."
+    exit 1
+fi
+
 if [[ $no_of_nodes -eq 1 ]]; then
     no_of_nodes_string="single"
 elif [[ $no_of_nodes -eq 2 ]]; then
@@ -294,6 +306,7 @@ echo ""
 echo "Preparing cloud formation template..."
 echo "============================================"
 echo "random_number: $random_number"
+echo "java_version: $java_version"
 if [[ $no_of_nodes -eq 1 ]]; then
     template_file_name="new-single-node.yml"
     cp single-node.yaml "$template_file_name"
@@ -312,9 +325,11 @@ aws cloudformation validate-template --template-body "file://$template_file_name
 test_parameters_json='.'
 test_parameters_json+=' | .["is_nodes_ec2_instance_type"]=$is_nodes_ec2_instance_type'
 test_parameters_json+=' | .["bastion_node_ec2_instance_type"]=$bastion_node_ec2_instance_type'
+test_parameters_json+=' | .["java_version"]=$java_version'
 jq -n \
     --arg is_nodes_ec2_instance_type "$wso2_is_instance_type" \
     --arg bastion_node_ec2_instance_type "$bastion_instance_type" \
+    --arg java_version "$java_version" \
     "$test_parameters_json" > "$results_dir"/cf-test-metadata.json
 
 stack_create_start_time=$(date +%s)
@@ -335,6 +350,7 @@ create_stack_command="aws cloudformation create-stack --stack-name $stack_name \
         ParameterKey=DBSnapshotId,ParameterValue=$db_snapshot_id \
         ParameterKey=EnableHighConcurrencyMode,ParameterValue=$enable_high_concurrency \
         ParameterKey=UserTag,ParameterValue=$user_tag \
+        ParameterKey=JavaVersion,ParameterValue=$java_version \
     --capabilities CAPABILITY_IAM"
 
 echo ""
