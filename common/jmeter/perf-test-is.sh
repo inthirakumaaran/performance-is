@@ -690,17 +690,19 @@ function test_scenarios() {
                 fi
                 local start_time=$(date +%s)
 
-                local effective_scenario_name="$scenario_name"
+                local scenario_desc="Scenario Name: $scenario_name, Duration: $test_duration m, Concurrent Users: $users"
                 if [[ "$scenario_mode" == *"B2B"* ]]; then
-                    effective_scenario_name="${scenario_name}_${org_count}_orgs"
+                    scenario_desc="$scenario_desc, Org Count: $org_count"
                 fi
-
-                local scenario_desc="Scenario Name: $effective_scenario_name, Duration: $test_duration m, Concurrent Users: $users"
                 echo "# Starting the performance test"
                 echo "$scenario_desc"
                 echo "=========================================================================================="
 
-                report_location=$PWD/results/${effective_scenario_name}/${heap}_heap/${users}_users
+                if [[ "$scenario_mode" == *"B2B"* ]]; then
+                    report_location=$PWD/results/${scenario_name}/${heap}_heap/${users}_users/${org_count}_orgs
+                else
+                    report_location=$PWD/results/${scenario_name}/${heap}_heap/${users}_users
+                fi
 
                 echo ""
                 echo "Report location is $report_location"
