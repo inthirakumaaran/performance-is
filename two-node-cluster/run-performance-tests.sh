@@ -53,7 +53,7 @@ function after_execute_test_scenario() {
     download_file "$wso2is_1_host_alias" $is_home/repository/logs/wso2carbon.log "$wso2is_1_host_alias.log"
     download_file "$wso2is_1_host_alias" $is_home/repository/logs/gc.log $wso2is_1_host_alias"_gc.log"
     download_file "$wso2is_1_host_alias" $is_home/repository/logs/heap-dump.hprof "$wso2is_1_host_alias-heap-dump.hprof"
-    ssh "$wso2is_1_host_alias" "jcmd \$(jcmd -l 2>/dev/null | grep -v Jcmd | awk '{print \$1}' | head -1) JFR.dump name=perf-recording filename=${jfr_file}" \
+    ssh "$wso2is_1_host_alias" "IS_PID=\$(pgrep -u ubuntu java | head -1) && JCMD=\$(dirname \$(readlink -f /proc/\${IS_PID}/exe))/jcmd && echo \"Dumping JFR for PID: \${IS_PID}\" && \${JCMD} \${IS_PID} JFR.dump name=perf-recording filename=${jfr_file}" \
         || echo "JFR dump failed for $wso2is_1_host_alias"
     download_file "$wso2is_1_host_alias" "$jfr_file" "${wso2is_1_host_alias}_recording.jfr"
 
@@ -61,7 +61,7 @@ function after_execute_test_scenario() {
     download_file "$wso2is_2_host_alias" $is_home/repository/logs/wso2carbon.log "$wso2is_2_host_alias.log"
     download_file "$wso2is_2_host_alias" $is_home/repository/logs/gc.log $wso2is_2_host_alias"_gc.log"
     download_file "$wso2is_2_host_alias" $is_home/repository/logs/heap-dump.hprof "$wso2is_2_host_alias-heap-dump.hprof"
-    ssh "$wso2is_2_host_alias" "jcmd \$(jcmd -l 2>/dev/null | grep -v Jcmd | awk '{print \$1}' | head -1) JFR.dump name=perf-recording filename=${jfr_file}" \
+    ssh "$wso2is_2_host_alias" "IS_PID=\$(pgrep -u ubuntu java | head -1) && JCMD=\$(dirname \$(readlink -f /proc/\${IS_PID}/exe))/jcmd && echo \"Dumping JFR for PID: \${IS_PID}\" && \${JCMD} \${IS_PID} JFR.dump name=perf-recording filename=${jfr_file}" \
         || echo "JFR dump failed for $wso2is_2_host_alias"
     download_file "$wso2is_2_host_alias" "$jfr_file" "${wso2is_2_host_alias}_recording.jfr"
 }
