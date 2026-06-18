@@ -143,15 +143,15 @@ declare -A test_scenario09=(
 #     [skip]=false
 #     [modes]="FULL QUICK PUBLISH"
 # )
-# declare -A test_scenario14=(
-#     [name]="14-Token_Exchange_Grant"
-#     [display_name]="Token Exchange Grant"
-#     [description]="Obtain an access token and an id token using the OAuth Token Exchange grant type."
-#     [jmx]="oauth/Token_Exchange_Grant.jmx"
-#     [tenantMode]=false
-#     [skip]=false
-#     [modes]="FULL QUICK PUBLISH"
-# )
+declare -A test_scenario14=(
+    [name]="14-Token_Exchange_Grant"
+    [display_name]="Token Exchange Grant"
+    [description]="Obtain an access token and an id token using the OAuth Token Exchange grant type."
+    [jmx]="oauth/Token_Exchange_Grant.jmx"
+    [tenantMode]=false
+    [skip]=false
+    [modes]="FULL QUICK PUBLISH"
+)
 # declare -A test_scenario15=(
 #     [name]="15-B2B_oidc_auth_code_redirect_with_consent"
 #     [display_name]="B2B OIDC Auth Code Grant Redirect With Consent"
