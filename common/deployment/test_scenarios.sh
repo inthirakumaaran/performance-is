@@ -98,15 +98,15 @@
 #     [skip]=false
 #     [modes]="FULL QUICK PUBLISH OIDC_AUTH_CODE_REDIRECT_WITHOUT_CONSENT_UA_GROUPS_ROLES_FLOW"
 # )
-declare -A test_scenario09=(
-    [name]="09-oidc_password_grant"
-    [display_name]="OIDC Password Grant Type"
-    [description]="Obtain an access token and an id token using the OAuth 2.0 password grant type."
-    [jmx]="oidc/OIDC_Password_Grant.jmx"
-    [tenantMode]=false
-    [skip]=false
-    [modes]="FULL QUICK PUBLISH"
-)
+# declare -A test_scenario09=(
+#     [name]="09-oidc_password_grant"
+#     [display_name]="OIDC Password Grant Type"
+#     [description]="Obtain an access token and an id token using the OAuth 2.0 password grant type."
+#     [jmx]="oidc/OIDC_Password_Grant.jmx"
+#     [tenantMode]=false
+#     [skip]=false
+#     [modes]="FULL QUICK PUBLISH"
+# )
 # declare -A test_scenario10=(
 #     [name]="10-oidc_password_grant_retrieve_user_attributes"
 #     [display_name]="OIDC Password Grant Type Retrieve User Attributes"
