@@ -26,15 +26,15 @@
 #     [skip]=false
 #     [modes]="FULL PUBLISH"
 # )
-# declare -A test_scenario1=(
-#     [name]="01-oidc_auth_code_redirect_with_consent"
-#     [display_name]="OIDC Auth Code Grant Redirect With Consent"
-#     [description]="Obtain an access token and an id token using the OAuth 2.0 authorization code grant type."
-#     [jmx]="oidc/OIDC_AuthCode_Redirect_WithConsent.jmx"
-#     [tenantMode]=false
-#     [skip]=false
-#     [modes]="FULL QUICK PUBLISH"
-# )
+declare -A test_scenario1=(
+    [name]="01-oidc_auth_code_redirect_with_consent"
+    [display_name]="OIDC Auth Code Grant Redirect With Consent"
+    [description]="Obtain an access token and an id token using the OAuth 2.0 authorization code grant type."
+    [jmx]="oidc/OIDC_AuthCode_Redirect_WithConsent.jmx"
+    [tenantMode]=false
+    [skip]=false
+    [modes]="FULL QUICK PUBLISH"
+)
 # declare -A test_scenario2=(
 #     [name]="02-oidc_auth_code_redirect_with_consent_retrieve_user_attributes"
 #     [display_name]="OIDC Auth Code Grant Redirect With Consent Retrieve User Attributes"
@@ -161,12 +161,12 @@
 #     [skip]=false
 #     [modes]="B2B"
 # )
-declare -A test_scenario16=(
-    [name]="16-App_Native_Auth"
-    [display_name]="App Native Authentication"
-    [description]="Perform a username and password login with app native authentication."
-    [jmx]="app-native-auth/App_Native_Auth.jmx"
-    [tenantMode]=false
-    [skip]=false
-    [modes]="FULL PUBLISH"
-)
+# declare -A test_scenario16=(
+#     [name]="16-App_Native_Auth"
+#     [display_name]="App Native Authentication"
+#     [description]="Perform a username and password login with app native authentication."
+#     [jmx]="app-native-auth/App_Native_Auth.jmx"
+#     [tenantMode]=false
+#     [skip]=false
+#     [modes]="FULL PUBLISH"
+# )
