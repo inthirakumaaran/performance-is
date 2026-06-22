@@ -17,15 +17,15 @@
 # Run Ballerina Performance Tests
 # ----------------------------------------------------------------------------
 
-# declare -A test_scenario0=(
-#     [name]="00-oauth_client_credential_grant"
-#     [display_name]="Client Credentials Grant Type"
-#     [description]="Obtain an access token using the OAuth 2.0 client credential grant type."
-#     [jmx]="oauth/OAuth_Client_Credentials_Grant.jmx"
-#     [tenantMode]=false
-#     [skip]=false
-#     [modes]="FULL PUBLISH"
-# )
+declare -A test_scenario0=(
+    [name]="00-oauth_client_credential_grant"
+    [display_name]="Client Credentials Grant Type"
+    [description]="Obtain an access token using the OAuth 2.0 client credential grant type."
+    [jmx]="oauth/OAuth_Client_Credentials_Grant.jmx"
+    [tenantMode]=false
+    [skip]=false
+    [modes]="FULL PUBLISH"
+)
 # declare -A test_scenario1=(
 #     [name]="01-oidc_auth_code_redirect_with_consent"
 #     [display_name]="OIDC Auth Code Grant Redirect With Consent"
@@ -134,15 +134,15 @@
 #     [skip]=false
 #     [modes]="FULL QUICK"
 # )
-declare -A test_scenario13=(
-    [name]="13-saml2_sso_redirect_binding"
-    [display_name]="SAML2 SSO Redirect Binding"
-    [description]="Obtain a SAML 2 assertion response using redirect binding."
-    [jmx]="saml/SAML2_SSO_Redirect_Binding.jmx"
-    [tenantMode]=false
-    [skip]=false
-    [modes]="FULL QUICK PUBLISH"
-)
+# declare -A test_scenario13=(
+#     [name]="13-saml2_sso_redirect_binding"
+#     [display_name]="SAML2 SSO Redirect Binding"
+#     [description]="Obtain a SAML 2 assertion response using redirect binding."
+#     [jmx]="saml/SAML2_SSO_Redirect_Binding.jmx"
+#     [tenantMode]=false
+#     [skip]=false
+#     [modes]="FULL QUICK PUBLISH"
+# )
 # declare -A test_scenario14=(
 #     [name]="14-Token_Exchange_Grant"
 #     [display_name]="Token Exchange Grant"
