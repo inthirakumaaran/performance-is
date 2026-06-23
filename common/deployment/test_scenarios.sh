@@ -134,15 +134,15 @@
 #     [skip]=false
 #     [modes]="FULL QUICK"
 # )
-declare -A test_scenario13=(
-    [name]="13-saml2_sso_redirect_binding"
-    [display_name]="SAML2 SSO Redirect Binding"
-    [description]="Obtain a SAML 2 assertion response using redirect binding."
-    [jmx]="saml/SAML2_SSO_Redirect_Binding.jmx"
-    [tenantMode]=false
-    [skip]=false
-    [modes]="FULL QUICK PUBLISH"
-)
+# declare -A test_scenario13=(
+#     [name]="13-saml2_sso_redirect_binding"
+#     [display_name]="SAML2 SSO Redirect Binding"
+#     [description]="Obtain a SAML 2 assertion response using redirect binding."
+#     [jmx]="saml/SAML2_SSO_Redirect_Binding.jmx"
+#     [tenantMode]=false
+#     [skip]=false
+#     [modes]="FULL QUICK PUBLISH"
+# )
 # declare -A test_scenario14=(
 #     [name]="14-Token_Exchange_Grant"
 #     [display_name]="Token Exchange Grant"
@@ -161,12 +161,12 @@ declare -A test_scenario13=(
 #     [skip]=false
 #     [modes]="B2B"
 # )
-# declare -A test_scenario16=(
-#     [name]="16-App_Native_Auth"
-#     [display_name]="App Native Authentication"
-#     [description]="Perform a username and password login with app native authentication."
-#     [jmx]="app-native-auth/App_Native_Auth.jmx"
-#     [tenantMode]=false
-#     [skip]=false
-#     [modes]="FULL PUBLISH"
-# )
+declare -A test_scenario16=(
+    [name]="16-App_Native_Auth"
+    [display_name]="App Native Authentication"
+    [description]="Perform a username and password login with app native authentication."
+    [jmx]="app-native-auth/App_Native_Auth.jmx"
+    [tenantMode]=false
+    [skip]=false
+    [modes]="FULL PUBLISH"
+)
