@@ -169,3 +169,23 @@ grant_validator="org.wso2.carbon.identity.oauth2.grant.token.exchange.TokenExcha
 [oauth.custom_grant_type.properties]
 IdTokenAllowed=true
 IATValidityPeriod="86400"
+
+# ── Usage metering event handlers (short flush intervals for perf tests) ──────
+# nodeId is intentionally omitted: it defaults to SHA-256(ip:portOffset), giving
+# each cluster node a distinct id so per-node counts sum correctly at read time.
+[[event_handler]]
+name = "mauLoginEventHandler"
+subscriptions = ["AUTHENTICATION_SUCCESS"]
+[event_handler.properties]
+flushInterval      = "1"
+flushIntervalUnit  = "MINUTES"
+cacheRetentionDays = "40"
+dbRetentionDays    = "60"
+mauPublishers      = "db"
+
+[[event_handler]]
+name = "m2mTokenUsageHandler"
+subscriptions = ["POST_ISSUE_ACCESS_TOKEN_V2"]
+[event_handler.properties]
+flushIntervalSeconds = "10"
+m2mTokenPublishers   = "db"

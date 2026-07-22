@@ -518,9 +518,38 @@ function run_tenant_test_data_scripts() {
 
     echo "Running tenant test data setup scripts"
     echo "=========================================================================================="
-    declare -a scripts=( "TestData_Add_Tenants.jmx" "TestData_SCIM2_Add_Tenant_Users.jmx" "TestData_Add_Tenant_OAuth_Apps.jmx" "TestData_Add_Tenant_SAML_Apps.jmx" "TestData_Add_Tenant_Device_Flow_OAuth_Apps.jmx" "TestData_Add_Tenant_OAuth_Idps.jmx" "TestData_Get_OAuth_Jwt_Token.jmx")
+    # Metering runs only need tenants, tenant users and OAuth apps.
+    # SAML / device-flow / IDP / JWT-token setup scripts are intentionally
+    # omitted to avoid creating unused artifacts.
+    declare -a scripts=( "TestData_Add_Tenants.jmx" "TestData_SCIM2_Add_Tenant_Users.jmx" "TestData_Add_Tenant_OAuth_Apps.jmx")
     declare -ag additional_jmeter_params=("noOfTenants=$noOfTenants" "spCount=$spCount" "idpCount=$idpCount" "jwtTokenUserPassword=$jwt_token_user_password" "jwtTokenClientSecret=$jwt_token_client_secret")
     run_jmeter_scripts "${scripts[@]}"
+}
+
+function report_metering_accuracy() {
+
+    # Auto-measure metering accuracy for the metering scenarios. Called from
+    # after_execute_test_scenario; relies on $scenario_name, $report_location and
+    # $rds_host being in scope (set by the run loop / before_execute).
+    local metric=""
+    case "$scenario_name" in
+        *password_grant*)    metric="mau" ;;
+        *client_credential*) metric="m2m" ;;
+        *) return 0 ;;
+    esac
+
+    local jtl="$report_location/results.jtl"
+    if [ ! -f "$jtl" ] && [ -f "$report_location/jtls.zip" ]; then
+        # results.jtl was moved into jtls.zip by the run loop; pull it back out.
+        unzip -o -j "$report_location/jtls.zip" results.jtl -d "$report_location" >/dev/null 2>&1 || true
+    fi
+    if [ -f "$jtl" ]; then
+        echo "Measuring metering accuracy ($metric)..."
+        bash "$script_dir/verify-metering.sh" "$metric" "$jtl" "$rds_host" wso2carbon wso2carbon \
+            2>&1 | tee "$report_location/metering-accuracy.txt" || true
+    else
+        echo "WARN: results.jtl not found; skipping metering accuracy check"
+    fi
 }
 
 function initiailize_test() {
@@ -619,8 +648,10 @@ function initiailize_test() {
         elif [ $use_db_snapshot == "true" ]; then
             run_test_data_scripts_with_user_snapshot
         else
-            run_test_data_scripts
-            #run_tenant_test_data_scripts
+            # Metering tests use tenant mode (100 tenants x 1000 users) so MAU is
+            # exercised per-tenant. Swap these two lines to revert to super-tenant.
+            #run_test_data_scripts
+            run_tenant_test_data_scripts
         fi
     fi
 }
@@ -668,6 +699,9 @@ function test_scenarios() {
 
                 time=$(expr "$test_duration" \* 60)
                 declare -a jmeter_params=("concurrency=$users" "time=$time" "host=$lb_host" "port=$is_port" "noOfNodes=$noOfNodes" "noOfBurst=$burstTraffic" "deployment=$deployment" "userCount=$userCount" "useDelay=$use_delay")
+                # Enable metering-mode behaviour in the JMX (e.g. unique scope per
+                # client_credentials request so each mints a NEW, countable token).
+                jmeter_params+=("metering=true")
 
                 local tenantMode=${scenario[tenantMode]}
                 if [ "$tenantMode" = true ]; then

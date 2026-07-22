@@ -42,6 +42,10 @@ function before_execute_test_scenario() {
     rds_host=$(get_ssh_hostname $rds_ssh_host_alias)
     session_rds_host=$(get_ssh_hostname $session_rds_ssh_host_alias)
     clean_database "$@" "$rds_host" "$session_rds_host"
+
+    # Reset metering tables so counts are scoped to this scenario.
+    mysql -h "$rds_host" -u wso2carbon -pwso2carbon IDENTITY_DB \
+        -e "TRUNCATE TABLE IDN_USAGE_COUNT; TRUNCATE TABLE IDN_MAU_COUNT;" || true
 }
 
 function after_execute_test_scenario() {
@@ -56,6 +60,8 @@ function after_execute_test_scenario() {
     download_file "$wso2is_2_host_alias" $is_home/repository/logs/wso2carbon.log "$wso2is_2_host_alias.log"
     download_file "$wso2is_2_host_alias" $is_home/repository/logs/gc.log $wso2is_2_host_alias"_gc.log"
     download_file "$wso2is_2_host_alias" $is_home/repository/logs/heap-dump.hprof "$wso2is_2_host_alias-heap-dump.hprof"
+
+    report_metering_accuracy
 }
 
 test_scenarios
