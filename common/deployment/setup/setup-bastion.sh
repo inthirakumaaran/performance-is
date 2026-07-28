@@ -172,6 +172,28 @@ echo "============================================"
 tar -C /home/ubuntu/workspace -xzf /home/ubuntu/is-performance-*.tar.gz
 
 echo ""
+echo "Sanitizing JMeter tarball (strip macOS AppleDouble metadata)..."
+echo "============================================"
+# The apache-jmeter tarball in the resources bucket is packed on macOS and
+# carries AppleDouble entries (._apache-jmeter-*) plus com.apple.quarantine
+# xattrs. setup-jmeter-client.sh takes the first tar entry as JMeter home and
+# lands on the "._apache-jmeter-*" metadata file (not a directory), so the
+# user.properties copy fails. Repack cleanly so only apache-jmeter-*/ remains.
+jm_tgz=$(ls /home/ubuntu/apache-jmeter-*.tgz 2>/dev/null | head -1)
+if [[ -n $jm_tgz ]]; then
+    jm_tmp=$(mktemp -d)
+    if tar -xzf "$jm_tgz" -C "$jm_tmp" 2>/dev/null; then
+        find "$jm_tmp" -name '._*' -delete
+        jm_dir=$(find "$jm_tmp" -maxdepth 1 -mindepth 1 -type d -name 'apache-jmeter-*' | head -1)
+        if [[ -n $jm_dir ]]; then
+            (cd "$jm_tmp" && tar -czf "$jm_tgz" "$(basename "$jm_dir")")
+            echo "Repacked $(basename "$jm_tgz") as clean $(basename "$jm_dir")"
+        fi
+    fi
+    rm -rf "$jm_tmp"
+fi
+
+echo ""
 echo "Running JMeter setup script..."
 echo "============================================"
 cd /home/ubuntu || exit 0
