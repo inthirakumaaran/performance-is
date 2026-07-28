@@ -131,8 +131,12 @@ for i in $(seq 1 60); do
 done
 
 # 3. Install prerequisites, retrying transient mirror/network hiccups.
+#    apt-get update is best-effort: the bastion adds custom MS/nginx apt
+#    repos that can make it exit non-zero, but unzip/zip/jq come from the
+#    default Ubuntu repos, so a flaky third-party repo must not block them.
 for attempt in 1 2 3; do
-    apt-get update -y && apt-get install -y unzip zip jq && break
+    apt-get update -y || true
+    apt-get install -y unzip zip jq && break
     echo "apt install attempt $attempt failed; retrying in 15s..."
     sleep 15
 done
