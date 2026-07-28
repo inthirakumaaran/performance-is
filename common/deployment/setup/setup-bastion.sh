@@ -106,6 +106,56 @@ function get_ssh_hostname() {
 }
 
 echo ""
+echo "Ensuring bastion prerequisites are installed..."
+echo "============================================"
+# The bastion can run this setup before cloud-init has finished its own apt
+# work, leaving the dpkg lock held and core tools (unzip, zip, jq, mysql)
+# missing. When that happens the whole run cascades into "command not found"
+# and "could not resolve hostname" failures. Wait for apt to settle, then
+# install what the rest of the pipeline needs, and fail fast if it can't.
+export DEBIAN_FRONTEND=noninteractive
+
+# 1. Wait for cloud-init to finish (best effort; not every AMI ships it).
+if command -v cloud-init >/dev/null 2>&1; then
+    cloud-init status --wait || true
+fi
+
+# 2. Wait (max ~5 min) for any apt/dpkg lock to be released.
+for i in $(seq 1 60); do
+    if ! fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 &&
+        ! fuser /var/lib/apt/lists/lock >/dev/null 2>&1; then
+        break
+    fi
+    echo "Waiting for apt/dpkg lock to be released... ($i)"
+    sleep 5
+done
+
+# 3. Install prerequisites, retrying transient mirror/network hiccups.
+for attempt in 1 2 3; do
+    apt-get update -y && apt-get install -y unzip zip jq && break
+    echo "apt install attempt $attempt failed; retrying in 15s..."
+    sleep 15
+done
+
+# mysql client package name varies across Ubuntu releases; try the common ones.
+if ! command -v mysql >/dev/null 2>&1; then
+    apt-get install -y mysql-client ||
+        apt-get install -y mysql-client-core-8.0 ||
+        apt-get install -y mariadb-client || true
+fi
+
+# 4. Fail fast (with a clear message) if anything is still missing, instead of
+#    cascading through 15 minutes of doomed downstream steps.
+missing=()
+for cmd in unzip zip jq mysql; do
+    command -v "$cmd" >/dev/null 2>&1 || missing+=("$cmd")
+done
+if [[ ${#missing[@]} -gt 0 ]]; then
+    echo "ERROR: required commands still missing after bastion setup: ${missing[*]}"
+    exit 1
+fi
+
+echo ""
 echo "Setting up required files..."
 echo "============================================"
 cd /home/ubuntu || exit 0

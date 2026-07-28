@@ -36,4 +36,11 @@ command="$script_dir/setup-jmeter-client.sh $@ \
     -w http://search.maven.org/remotecontent?filepath=org/mortbay/jetty/alpn/alpn-boot/8.1.12.v20180117/alpn-boot-8.1.12.v20180117.jar \
     -o $alpnboot_dir/alpnboot.jar -j bzm-parallel"
 echo $command
-$command > /dev/null 2>&1
+# Keep the full output so failures here (which otherwise leave the SSH host
+# aliases and JMeter unconfigured and cascade downstream) are diagnosable.
+log_file="/home/ubuntu/jmeter-client-setup.log"
+if ! $command > "$log_file" 2>&1; then
+    echo "ERROR: setup-jmeter-client.sh failed. Last 50 lines of $log_file:"
+    tail -n 50 "$log_file"
+    exit 1
+fi
