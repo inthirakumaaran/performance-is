@@ -280,5 +280,35 @@ if [[ $db_type == "mysql" ]]; then
     sed -i "s|defaultAutoCommit=true|defaultAutoCommit=false|g" "$carbon_home/repository/conf/deployment.toml" || echo "Editing deployment.toml file failed!"
 fi
 
+echo ""
+echo "Starting WSO2 IS server and waiting until it is ready..."
+echo "-------------------------------------------"
+# Previously this was a blind "sleep 60s", which let the tenant/data-setup
+# phase start before IS finished deploying. The first tenant-creation calls
+# then failed with no retry, losing ~30% of tenants and cascading into ~30%
+# of the later user-creation calls. Gate on the Carbon startup marker in
+# wso2carbon.log so we only return once this node is actually up.
+log_file="$carbon_home/repository/logs/wso2carbon.log"
+started_before=$(grep -c "Carbon started in" "$log_file" 2>/dev/null) || started_before=0
+
 ./wso2is/bin/wso2server.sh start
-sleep 60s
+
+is_ready=false
+for i in $(seq 1 60); do # ~10 min ceiling, then proceed anyway
+    started_now=$(grep -c "Carbon started in" "$log_file" 2>/dev/null) || started_now=0
+    if [ "$started_now" -gt "$started_before" ]; then
+        http_code=$(curl -k -s -o /dev/null -w '%{http_code}' https://localhost:9443/ 2>/dev/null) || http_code=000
+        echo "IS reported 'Carbon started' after ~$((i * 10))s (HTTPS root returned $http_code)"
+        is_ready=true
+        break
+    fi
+    echo "Waiting for IS to finish starting... (attempt $i/60)"
+    sleep 10
+done
+
+if [ "$is_ready" != true ]; then
+    echo "WARN: 'Carbon started' marker not seen within the wait window; proceeding anyway"
+fi
+
+# Small grace period for the HTTPS connector / webapps to settle before load.
+sleep 15
