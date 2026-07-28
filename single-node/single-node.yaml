@@ -388,7 +388,7 @@ Resources:
             apt-get update
             DEBIAN_FRONTEND=noninteractive apt-get install -yq mysql-client
             DEBIAN_FRONTEND=noninteractive apt install -y postgresql-client
-            DEBIAN_FRONTEND=noninteractive apt-get install -y unzip
+            DEBIAN_FRONTEND=noninteractive apt-get install -y unzip zip jq
             DEBIAN_FRONTEND=noninteractive env ACCEPT_EULA=Y apt-get install -y mssql-tools unixodbc-dev
             export PATH=/opt/mssql-tools/bin:$PATH
             echo "export PATH=$PATH" >>/etc/environment
@@ -478,7 +478,7 @@ Resources:
             apt-get update
             DEBIAN_FRONTEND=noninteractive apt-get install -yq mysql-client
             DEBIAN_FRONTEND=noninteractive apt install -y postgresql-client
-            DEBIAN_FRONTEND=noninteractive apt-get install -y unzip
+            DEBIAN_FRONTEND=noninteractive apt-get install -y unzip zip jq
             DEBIAN_FRONTEND=noninteractive env ACCEPT_EULA=Y apt-get install -y mssql-tools unixodbc-dev
             export PATH=/opt/mssql-tools/bin:$PATH
             echo "export PATH=$PATH" >>/etc/environment

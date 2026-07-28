@@ -136,7 +136,7 @@ Resources:
             - curl https://packages.microsoft.com/config/ubuntu/18.04/prod.list | sudo tee /etc/apt/sources.list.d/msprod.list
             - apt-get update
             - DEBIAN_FRONTEND=noninteractive apt-get install -yq mysql-client
-            - DEBIAN_FRONTEND=noninteractive apt-get install -y unzip
+            - DEBIAN_FRONTEND=noninteractive apt-get install -y unzip zip jq
             - DEBIAN_FRONTEND=noninteractive env ACCEPT_EULA=Y apt-get install -y mssql-tools unixodbc-dev
             - 'export PATH=~/.local/bin:/usr/bin:/opt/mssql-tools/bin:$PATH'
             - echo "export PATH=$PATH" >>/etc/environment
