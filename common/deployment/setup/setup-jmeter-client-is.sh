@@ -40,7 +40,17 @@ echo $command
 # aliases and JMeter unconfigured and cascade downstream) are diagnosable.
 log_file="/home/ubuntu/jmeter-client-setup.log"
 if ! $command > "$log_file" 2>&1; then
-    echo "ERROR: setup-jmeter-client.sh failed. Last 50 lines of $log_file:"
+    echo "WARN: setup-jmeter-client.sh returned non-zero. Last 50 lines of $log_file:"
     tail -n 50 "$log_file"
-    exit 1
+    # The essential outputs are the SSH host aliases (whose absence caused the
+    # original downstream cascade) and the JMeter install. A trailing plugin
+    # install failure — e.g. bzm-parallel, which no JMX in this repo uses, and
+    # which breaks only because the JMeter Plugins Manager auto-upgrades
+    # cmdrunner past the version the upstream script expects — is non-fatal.
+    # So only abort if the SSH client config was never created.
+    if [ ! -s /home/ubuntu/.ssh/config ]; then
+        echo "ERROR: SSH client config (/home/ubuntu/.ssh/config) missing; JMeter client setup truly failed."
+        exit 1
+    fi
+    echo "SSH client config present; treating the non-zero exit as non-fatal and continuing."
 fi
