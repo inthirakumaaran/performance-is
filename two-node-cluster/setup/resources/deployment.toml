@@ -179,7 +179,11 @@ IdTokenAllowed=true
 IATValidityPeriod="86400"
 
 [usage_tracking.usage_count_collector]
-interval_seconds = 300        # publish cadence (0 = daily hour/minute)
+# Publish cadence (0 = daily hour/minute). Kept short for accuracy runs: the
+# post-scenario check in perf-test-is.sh has to wait for a full collector cycle
+# before the M2M count can be compared, so every extra second here is added to
+# every scenario/concurrency data point. Raise it for throughput-only runs.
+interval_seconds = 60
 mau_interval_publish = true   # non-prod only; omit/false for monthly MAU
 
 [[event_handler]]

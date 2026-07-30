@@ -105,6 +105,17 @@ token_issuer="Opaque"
 enable_burst=false
 burstTraffic=3000
 
+# Usage-metering verification (MAU / M2M token counts). Set METERING_VERIFY=false to skip.
+metering_verify="${METERING_VERIFY:-true}"
+# Max seconds to wait for the MAU flush task and the usage-count collector to settle
+# after a scenario. Keep this above usage_tracking.usage_count_collector.interval_seconds.
+metering_settle_seconds="${METERING_SETTLE_SECONDS:-240}"
+# Percent deviation tolerated before a metric is reported as FAIL.
+metering_tolerance="${METERING_TOLERANCE:-0}"
+# Run-level roll-up: one line per scenario/concurrency. Lives at the root of the
+# results directory, so it is zipped into results.zip with everything else.
+metering_summary_file="$PWD/results/metering-summary.txt"
+
 # Start time of the test
 test_start_time=$(date +%s)
 # Scenario specific counters
@@ -461,6 +472,14 @@ function print_durations() {
         echo "WARNING: There were no scenarios to test."
     fi
     printf "Script execution time: %s\n" "$(format_time $(measure_time "$test_start_time"))"
+
+    # Roll-up of every metering check in this run, so the console output ends with
+    # the accuracy verdicts instead of only the timings.
+    if [[ -f $metering_summary_file ]]; then
+        echo ""
+        echo "Usage-metering verification summary:"
+        cat "$metering_summary_file"
+    fi
 }
 
 function run_jmeter_scripts() {
@@ -500,7 +519,19 @@ function run_test_data_scripts() {
 
     echo "Running test data setup scripts"
     echo "=========================================================================================="
-    declare -a scripts=("TestData_SCIM2_Add_User.jmx" "TestData_Add_OAuth_Apps.jmx" "TestData_Add_OAuth_Apps_Requesting_Claims.jmx" "TestData_Add_OAuth_Apps_Without_Consent.jmx" "TestData_Add_SAML_Apps.jmx" "TestData_Add_Device_Flow_OAuth_Apps.jmx" "TestData_Add_OAuth_Idps.jmx" "TestData_Get_OAuth_Jwt_Token.jmx")
+    # Trimmed to what the currently enabled metering scenarios actually consume, so a
+    # verification round starts in minutes instead of hours:
+    #   TestData_SCIM2_Add_User             -> isTestUser_*                        (MAU logins)
+    #   TestData_Add_OAuth_Apps             -> consumerKey_*                       (00 client_credentials)
+    #   TestData_Add_OAuth_Apps_Without_Consent
+    #                                       -> requestClaimsWithoutConsentConsumerKey_*
+    #                                                                              (05 auth code w/o consent)
+    # Restore the full list below when re-enabling the SAML / device-flow / IdP /
+    # JWT-bearer / claims-with-consent scenarios in test_scenarios.sh:
+    #   TestData_Add_OAuth_Apps_Requesting_Claims.jmx TestData_Add_SAML_Apps.jmx
+    #   TestData_Add_Device_Flow_OAuth_Apps.jmx TestData_Add_OAuth_Idps.jmx
+    #   TestData_Get_OAuth_Jwt_Token.jmx
+    declare -a scripts=("TestData_SCIM2_Add_User.jmx" "TestData_Add_OAuth_Apps.jmx" "TestData_Add_OAuth_Apps_Without_Consent.jmx")
     declare -ag additional_jmeter_params=("jwtTokenUserPassword=$jwt_token_user_password" "jwtTokenClientSecret=$jwt_token_client_secret")
     run_jmeter_scripts "${scripts[@]}"
 }
@@ -521,6 +552,79 @@ function run_tenant_test_data_scripts() {
     declare -a scripts=( "TestData_Add_Tenants.jmx" "TestData_SCIM2_Add_Tenant_Users.jmx" "TestData_Add_Tenant_OAuth_Apps.jmx" "TestData_Add_Tenant_SAML_Apps.jmx" "TestData_Add_Tenant_Device_Flow_OAuth_Apps.jmx" "TestData_Add_Tenant_OAuth_Idps.jmx" "TestData_Get_OAuth_Jwt_Token.jmx")
     declare -ag additional_jmeter_params=("noOfTenants=$noOfTenants" "spCount=$spCount" "idpCount=$idpCount" "jwtTokenUserPassword=$jwt_token_user_password" "jwtTokenClientSecret=$jwt_token_client_secret")
     run_jmeter_scripts "${scripts[@]}"
+}
+
+# ── Usage-metering verification ───────────────────────────────────────────────
+# The metering pipeline is checked against the Identity Server's own records
+# (see verify-metering.sh). Only MySQL deployments are supported, since the
+# verifier queries IDENTITY_DB / SESSION_DB directly.
+
+function metering_enabled() {
+
+    [[ $metering_verify == "true" ]] || return 1
+    [[ $db_type == "mysql" ]] || return 1
+    [[ -f "$script_dir/verify-metering.sh" ]] || return 1
+    return 0
+}
+
+# ssh aliases of every IS node in this deployment, whichever module sourced us.
+function metering_is_hosts() {
+
+    local hosts="" alias_var
+    for alias_var in wso2is_host_alias wso2is_1_host_alias wso2is_2_host_alias \
+        wso2is_3_host_alias wso2is_4_host_alias; do
+        if [[ -n ${!alias_var:-} ]]; then
+            hosts+="${!alias_var} "
+        fi
+    done
+    echo "${hosts% }"
+}
+
+# Clear the metering tables so each scenario is measured from zero. Must run AFTER
+# before_execute_test_scenario, which restarts IS and therefore empties the
+# in-memory MAU cache — otherwise the next flush would re-insert the old users.
+function reset_metering_state() {
+
+    metering_enabled || return 0
+
+    local identity_host
+    identity_host=$(get_ssh_hostname "${rds_ssh_host_alias:-rds}")
+    if [[ -z $identity_host ]]; then
+        echo "WARN: could not resolve the identity DB host; skipping metering reset."
+        return 0
+    fi
+    echo ""
+    echo "Resetting usage-metering state..."
+    bash "$script_dir/verify-metering.sh" reset --identity-host "$identity_host" || \
+        echo "WARN: metering reset failed."
+}
+
+# Compare the metering output for the scenario just executed against the IS's own
+# records. Never fails the run: a mismatch is a finding, not a test-harness error.
+function verify_metering() {
+
+    metering_enabled || return 0
+
+    local identity_host session_host
+    identity_host=$(get_ssh_hostname "${rds_ssh_host_alias:-rds}")
+    session_host=$(get_ssh_hostname "${session_rds_ssh_host_alias:-sessionrds}")
+    if [[ -z $identity_host || -z $session_host ]]; then
+        echo "WARN: could not resolve the DB hosts; skipping metering verification."
+        return 0
+    fi
+
+    echo ""
+    echo "Verifying usage-metering accuracy..."
+    bash "$script_dir/verify-metering.sh" verify \
+        --identity-host "$identity_host" \
+        --session-host "$session_host" \
+        --is-hosts "$(metering_is_hosts)" \
+        --settle-seconds "$metering_settle_seconds" \
+        --tolerance "$metering_tolerance" \
+        --label "$scenario_name / ${users} users / ${heap} heap" \
+        --out "$report_location/metering-verification.txt" \
+        --summary-file "$metering_summary_file" || \
+        echo "Metering verification reported a mismatch. See $report_location/metering-verification.txt"
 }
 
 function initiailize_test() {
@@ -675,6 +779,7 @@ function test_scenarios() {
                 fi
 
                 before_execute_test_scenario "$db_type"
+                reset_metering_state
 
                 export JVM_ARGS="-Xms$jmeter_client_heap_size -Xmx$jmeter_client_heap_size  -Xloggc:$report_location/jmeter_gc.log $JMETER_JVM_ARGS"
 
@@ -700,6 +805,7 @@ function test_scenarios() {
                 zip -jm "$report_location"/jtls.zip "$report_location"/results*.jtl
 
                 after_execute_test_scenario
+                verify_metering
 
                 local current_execution_duration="$(measure_time "$start_time")"
                 echo -n "# Completed the performance test."
