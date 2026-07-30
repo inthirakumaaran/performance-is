@@ -86,7 +86,10 @@ is_port=$default_is_port
 noOfTenants=100
 spCount=10
 idpCount=1
-userCount=1000
+# Size of the user pool created at setup and drawn from at random by the login
+# scenarios (JMX: noOfUsers = __P(userCount)). This is the MAU ceiling: the metric
+# counts distinct users, so it cannot exceed this. Override with -u.
+userCount=10000
 mode=""
 use_db_snapshot="false"
 deployment=""
@@ -515,6 +518,27 @@ function run_b2b_test_data_scripts() {
     run_jmeter_scripts "${scripts[@]}"
 }
 
+function run_user_creation_script() {
+
+    # Creating the user pool is the long pole of the setup phase, and the setup scripts
+    # otherwise run with concurrency=1 (the JMX default), i.e. one SCIM call at a time.
+    # TestData_SCIM2_Add_User sizes itself as threads=concurrency and
+    # loops=userCount/concurrency, and indexes usernames from a counter shared across
+    # threads, so raising the thread count creates exactly the same users, faster —
+    # provided the division is exact, otherwise jexl truncates and users go missing.
+    # Only this script gets the override: the app-creation scripts take loopCount as an
+    # independent property, so a thread count there would multiply the artifacts created.
+    local threads="${TEST_DATA_SETUP_CONCURRENCY:-10}"
+    if [[ $threads -lt 1 ]] || [[ $((userCount % threads)) -ne 0 ]]; then
+        echo "userCount=$userCount is not divisible by $threads; creating users single-threaded."
+        threads=1
+    fi
+    echo ""
+    echo "Creating $userCount users using $threads thread(s)..."
+    declare -ag additional_jmeter_params=("concurrency=$threads")
+    run_jmeter_scripts "TestData_SCIM2_Add_User.jmx"
+}
+
 function run_test_data_scripts() {
 
     echo "Running test data setup scripts"
@@ -531,7 +555,9 @@ function run_test_data_scripts() {
     #   TestData_Add_OAuth_Apps_Requesting_Claims.jmx TestData_Add_SAML_Apps.jmx
     #   TestData_Add_Device_Flow_OAuth_Apps.jmx TestData_Add_OAuth_Idps.jmx
     #   TestData_Get_OAuth_Jwt_Token.jmx
-    declare -a scripts=("TestData_SCIM2_Add_User.jmx" "TestData_Add_OAuth_Apps.jmx" "TestData_Add_OAuth_Apps_Without_Consent.jmx")
+    run_user_creation_script
+
+    declare -a scripts=("TestData_Add_OAuth_Apps.jmx" "TestData_Add_OAuth_Apps_Without_Consent.jmx")
     declare -ag additional_jmeter_params=("jwtTokenUserPassword=$jwt_token_user_password" "jwtTokenClientSecret=$jwt_token_client_secret")
     run_jmeter_scripts "${scripts[@]}"
 }

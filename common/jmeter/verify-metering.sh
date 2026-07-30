@@ -368,6 +368,25 @@ function distinct_mau_log_users() {
     sort -u "$tmp_dir/log_mau_keys.raw" | wc -l | tr -d '[:space:]'
 }
 
+# wso2carbon.log rotates under load, and only the live file is greppable, so the
+# log-derived stages can be a small fraction of the truth. Detect it and say so,
+# otherwise "stage 2 << stage 4" reads as the receiver inventing counts.
+function rotated_log_note() {
+
+    local host total=0 count
+    for host in $is_hosts; do
+        count=$(is_log_cmd "$host" \
+            "ls /home/ubuntu/wso2is/repository/logs/wso2carbon*.log* 2>/dev/null | wc -l" |
+            tail -1 | tr -d '[:space:]')
+        if [[ $count =~ ^[0-9]+$ ]]; then
+            total=$((total + count - 1))
+        fi
+    done
+    if [[ $total -gt 0 ]]; then
+        echo "$total"
+    fi
+}
+
 # Sum of "count=N" over the collector's publish log lines for one count type.
 # UsageCountDataCollector logs the drained value whether or not the receiver
 # accepted it, so this reflects everything the collector took out of the cache.
@@ -456,6 +475,13 @@ Q_CC_TOKENS="SELECT COUNT(*) FROM IDN_OAUTH2_ACCESS_TOKEN WHERE GRANT_TYPE='clie
 Q_M2M_PUBLISHED="SELECT COALESCE(SUM(VALUE),0) FROM USAGE_COUNT WHERE COUNT_TYPE='M2M_TOKEN'"
 Q_M2M_DAILY="SELECT COALESCE(SUM(VALUE),0) FROM DAILY_USAGE_COUNT WHERE COUNT_TYPE='M2M_TOKEN'"
 Q_M2M_PUBLISH_ROWS="SELECT COUNT(*) FROM USAGE_COUNT WHERE COUNT_TYPE='M2M_TOKEN'"
+# Discriminates token REUSE from token RENEWAL, which produce an identical row count
+# but opposite conclusions. If every row was created in the first seconds of the
+# scenario, IS served one token per app and reused it for the rest of the run (so a
+# metered count near the request count is an over-count). If TIME_CREATED tracks the
+# end of the scenario, tokens were genuinely reminted per request and cleanup deleted
+# the superseded rows (so stage 1 is an undercount, not the component's fault).
+Q_TOKEN_CONTEXT="SELECT CONCAT(TOKEN_STATE, '  rows=', COUNT(*), '  apps=', COUNT(DISTINCT CONSUMER_KEY_ID), '  first=', MIN(TIME_CREATED), '  last=', MAX(TIME_CREATED)) FROM IDN_OAUTH2_ACCESS_TOKEN WHERE GRANT_TYPE='client_credentials' GROUP BY TOKEN_STATE"
 
 # Wait for the asynchronous stages to settle: the MAU flush task (flushInterval,
 # minutes) and the usage-count collector (IntervalSeconds). Both values must stop
@@ -490,6 +516,8 @@ while :; do
 done
 echo "Settled after ${waited}s (mau_distinct=$mau_now, m2m_published=$m2m_now)."
 
+rotated_logs=$(rotated_log_note)
+
 report="$tmp_dir/report.txt"
 overall_status=0
 verified_any=false
@@ -516,6 +544,10 @@ m2m_delta="-"
     echo " settled after    : ${waited}s"
     if [[ -n $missing_table_list ]]; then
         echo " MISSING TABLES   : $missing_table_list"
+    fi
+    if [[ -n ${rotated_logs:-} ]]; then
+        echo " NOTE             : wso2carbon.log rotated ($rotated_logs archived file(s)); the"
+        echo "                    log-derived stages below are LOWER BOUNDS, not totals."
     fi
     echo "=================================================================="
 } >"$report"
@@ -613,6 +645,8 @@ if [[ $metric == "all" || $metric == "m2m" ]]; then
     m2m_published=$((m2m_published_total - m2m_baseline))
     m2m_daily=$((m2m_daily_total - m2m_daily_baseline))
 
+    m2m_skipped_pair=$(sum_over_is_nodes "grep -c 'Existing token reused' $CARBON_LOG 2>/dev/null")
+    m2m_skipped="${m2m_skipped_pair%%|*}"
     m2m_incremented_pair=$(sum_over_is_nodes "grep -c '\[M2M\] Incremented' $CARBON_LOG 2>/dev/null")
     m2m_incremented="${m2m_incremented_pair%%|*}"
     m2m_incremented_by_node="${m2m_incremented_pair#*|}"
@@ -650,9 +684,16 @@ if [[ $metric == "all" || $metric == "m2m" ]]; then
         echo " -----------------------------------------------------------------"
         printf "  1. tokens issued   %-42s : %s\n" "IDENTITY_DB.IDN_OAUTH2_ACCESS_TOKEN" "$tokens_issued"
         printf "  2. handler counted %-42s : %s   [%s]\n" "IS log '[M2M] Incremented'" "$m2m_incremented" "${m2m_incremented_by_node% }"
+        printf "     handler skipped  %-42s : %s\n" "IS log 'Existing token reused' (reuse filter)" "$m2m_skipped"
         printf "  3. collector drained %-40s : %s   [%s]\n" "IS log 'usage count: type=M2M_TOKEN'" "$m2m_drained" "${m2m_drained_by_node% }"
         printf "  4. receiver stored %-42s : %s  (table total: %s, rows: %s)\n" "IDENTITY_DB.USAGE_COUNT type=M2M_TOKEN" "$m2m_published" "$m2m_published_total" "$m2m_publish_rows"
         printf "     aggregated       %-42s : %s\n" "IDENTITY_DB.DAILY_USAGE_COUNT type=M2M_TOKEN" "$m2m_daily"
+        echo ""
+        echo "  client_credentials token rows (reuse vs renewal):"
+        run_sql "$IDENTITY_DB" "$identity_host" "$Q_TOKEN_CONTEXT" | sed 's/^/    /'
+        echo "    (rows created at the START of the scenario => tokens were reused, so a metered"
+        echo "     count near the request count is an over-count. TIME_CREATED tracking the END of"
+        echo "     the scenario => tokens were reminted per request and stage 1 is the undercount.)"
         echo ""
         printf "  delta (stage 4 - stage 1)            : %s\n" "$m2m_delta"
         printf "  stage-4 accuracy                     : %s%%\n" "$m2m_accuracy"
