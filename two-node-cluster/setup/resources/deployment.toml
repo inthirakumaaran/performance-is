@@ -177,3 +177,31 @@ grant_validator="org.wso2.carbon.identity.oauth2.grant.token.exchange.TokenExcha
 [oauth.custom_grant_type.properties]
 IdTokenAllowed=true
 IATValidityPeriod="86400"
+
+[usage_tracking.usage_count_collector]
+interval_seconds = 300        # publish cadence (0 = daily hour/minute)
+mau_interval_publish = true   # non-prod only; omit/false for monthly MAU
+
+[[event_handler]]
+name          = "mauLoginEventHandler"
+subscriptions = ["AUTHENTICATION_SUCCESS"]
+
+[event_handler.properties]
+flushInterval      = 1         # how often the in-memory MAU cache is flushed to IDN_MAU_COUNT
+flushIntervalUnit  = "MINUTES"  # MINUTES | HOURS | DAYS
+cacheRetentionDays = 40         # days to keep per-user rows in the in-memory cache
+dbRetentionDays    = 60         # days to keep per-user rows in IDN_MAU_COUNT
+
+[[event_handler]]
+name          = "m2mTokenUsageHandler"
+subscriptions = ["POST_ISSUE_ACCESS_TOKEN_V2"]
+
+[[event_handler]]
+name          = "agentUsageHandler"
+subscriptions = ["AUTHENTICATION_SUCCESS", "POST_ISSUE_ACCESS_TOKEN_V2"]
+
+[event_handler.properties]
+userStoreDomain          = "AGENT"  # userstore domain where agent identities live
+trackLogin               = true     # AGENT logins            -> AGENT_LOGIN
+trackOBOTokenExchange    = true     # actor-token exchange    -> AGENT_TOKEN / AGENT_REFRESH_TOKEN
+trackDirectTokenExchange = true     # direct agent tokens     -> AGENT_DIRECT_TOKEN / AGENT_DIRECT_REFRESH_TOKEN
